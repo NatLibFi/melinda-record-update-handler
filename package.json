@@ -1,0 +1,82 @@
+{
+	"name": "@natlibfi/todo",
+	"description": "todo",
+	"author": {
+		"name": "The National Library of Finland"
+	},
+	"homepage": "todo",
+	"bugs": {
+		"url": "todo"
+	},
+	"repository": {
+		"type": "git",
+		"url": "todo"
+	},
+	"license": "AGPL-3.0+",
+	"version": "0.0.1",
+	"main": "src/index.js",
+	"engines": {
+		"node": ">=12"
+	},
+	"scripts": {
+		"start": "node ./dist/index",
+		"start:dev": "DEBUG=@natlibfi/* babel-node ./src/index",
+		"lint": "eslint src",
+		"lint:dev": "eslint --fix src",
+		"check-deps": "npm-check;exit 0",
+		"test": "npm run lint",
+		"dev": "NODE_ENV=development cross-env DEBUG=1 nodemon",
+		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist --minified",
+		"prod": "NODE_ENV=production npm run build && npm run start"
+	},
+	"dependencies": {
+		"@natlibfi/marc-record-serializers": "^7.1.6",
+		"@natlibfi/melinda-commons": "^11.1.1",
+		"@natlibfi/melinda-backend-commons": "2.0.2",
+		"@natlibfi/melinda-record-link-migration-commons": "git+https://github.com/NatLibFi/melinda-record-link-migration-commons.git#melkehitys-1117",
+		"@natlibfi/melinda-record-import-commons": "7.0.3",
+		"@natlibfi/sru-client": "^4.0.2",
+		"amqplib": ">=0.5.5 < 1.0.0",
+		"esm": "^3.2.25",
+		"moment": "^2.24.0",
+		"mongodb": "^3.5.9",
+		"xml2js": ">=0.4.23 < 1.0.0",
+		"uuid": "^8.2.0"
+	},
+	"devDependencies": {
+		"@babel/cli": "^7.8.4",
+		"@babel/core": "^7.8.7",
+		"@babel/node": "^7.8.7",
+		"@babel/preset-env": "^7.8.7",
+		"babel-eslint": "^10.0.3",
+		"cross-env": "^7.0.0",
+		"eslint": "^6.8.0",
+		"@natlibfi/eslint-config-melinda-backend": ">1.0.0-alpha.1",
+		"eslint-plugin-import": "^2.20.0",
+		"nodemon": "^2.0.2",
+		"npm-check": "^5.9.0"
+	},
+	"eslintConfig": {
+		"extends": "@natlibfi/melinda-backend"
+	},
+	"babel": {
+		"presets": [
+			[
+				"@babel/preset-env",
+				{
+					"targets": {
+						"node": "12"
+					}
+				}
+			]
+		]
+	},
+	"nodemonConfig": {
+		"exec": "npm run lint:dev && npm run start:dev",
+		"watch": [
+			"src/*"
+		],
+		"ext": "js",
+		"delay": 2.5
+	}
+}
