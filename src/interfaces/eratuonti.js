@@ -14,15 +14,28 @@ export async function readBlobsFromEratuonti(job, mongoOperator, {apiUrl, apiUse
   logger.log('info', `Reading eratuonti blobs from job: ${jobId}`);
   logger.log('info', `Blobs: ${blobIds}`);
 
-  await readBlobs(blobIds);
-  // Await mongoOperator.setState({jobId, state: COMMON_JOB_STATES.DONE});
+  const needAction = await readBlobs(blobIds);
+  if (needAction) {
+    await handleReset();
+    return;
+  }
 
-  return true;
+  await mongoOperator.setState({jobId, state: COMMON_JOB_STATES.DONE});
+  return;
 
-  async function readBlobs(blobIds) {
+  async function readBlobs(blobIds, needRestart = false, wait = false) {
+    if (wait) {
+      await setTimeoutPromise(3000);
+      return readBlobs(blobIds);
+    }
+
     const [id, ...rest] = blobIds;
     if (id === undefined) {
-      return;
+      if (needRestart) {
+        return true;
+      }
+
+      return false;
     }
 
     logger.log('debug', `Blob id: ${id}`);
@@ -31,44 +44,23 @@ export async function readBlobsFromEratuonti(job, mongoOperator, {apiUrl, apiUse
 
     /*
     {
-      "processingInfo":{
-        "numberOfRecords":0,
-        "failedRecords":[],
-        "importResults":[]
-      },
-      "state":"PENDING_TRANSFORMATION",
-      "id":"87afa7eb-2bee-4c64-980c-9823316fb25f",
-      "profile":"foo",
-      "contentType":"application/json",
-      "creationTime":"2020-10-08T08:47:13+03:00",
-      "modificationTime":"2020-10-08T08:47:13+03:00"
-    }
-
-    {
-      "processingInfo": {
-        "numberOfRecords": 1,
-        "failedRecords": [],
-        "importResults": []
-      },
-      "state": "TRANSFORMED",
-      "id": "5f8f1f26-4701-4ea4-b5c6-5c50b45129fb",
-      "profile": "foo",
-      "contentType": "application/json",
-      "creationTime": "2020-10-14T09:33:24+00:00",
-      "modificationTime": "2020-10-14T09:33:33+00:00"
-    }
-
-    {
       "processingInfo": {
         "numberOfRecords": 1,
         "failedRecords": [],
         "importResults": [
           {
-            "timestamp": "2020-10-14T09:33:42.490Z",
+            "timestamp": "2020-10-28T11:26:32.502Z",
             "status": "SKIPPED",
             "metadata": {
-              "title": "Dummy record",
-              "standardIdentifiers": "1-dummy-record"
+              "id": "016122561",
+              "reason": "409 - Modification history mismatch (CAT)"
+            }
+          },
+          {
+            "timestamp": "2020-10-28T10:03:07.695Z",
+            "status": "UPDATED",
+            "metadata": {
+              "id": "016122573"
             }
           }
         ]
@@ -80,7 +72,6 @@ export async function readBlobsFromEratuonti(job, mongoOperator, {apiUrl, apiUse
       "creationTime": "2020-10-14T09:33:24+00:00",
       "modificationTime": "2020-10-14T09:33:42+00:00"
     }
-
     */
     // logger.log('debug', JSON.stringify(result.state, undefined, 2));
     // console.log(result); // eslint-disable-line no-console
@@ -88,91 +79,85 @@ export async function readBlobsFromEratuonti(job, mongoOperator, {apiUrl, apiUse
     /*Blob states: PENDING_TRANSFORMATION, TRANSFORMATION_IN_PROGRESS, TRANSFORMATION_FAILED, TRANSFORMED, PROCESSED, ABORTED */
     if (result.state === BLOB_STATE.PENDING_TRANSFORMATION) {
       logger.log('info', 'Blob is pending transformation!');
-      logger.log('debug', JSON.stringify(result, undefined, 2));
-      await setTimeoutPromise(3000);
-      return readBlobs([id, ...rest]);
+      logger.log('silly', JSON.stringify(result, undefined, 2));
+      return readBlobs([id, ...rest], needRestart, true);
     }
 
     if (result.state === BLOB_STATE.TRANSFORMATION_IN_PROGRESS) {
       logger.log('info', 'Blob is in transformation!');
-      logger.log('debug', JSON.stringify(result, undefined, 2));
-      await setTimeoutPromise(3000);
-      return readBlobs([id, ...rest]);
+      logger.log('silly', JSON.stringify(result, undefined, 2));
+      return readBlobs([id, ...rest], needRestart, true);
     }
 
     if (result.state === BLOB_STATE.TRANSFORMED) {
-      return handleTransformed(result);
+      logger.log('info', 'Blob has been transformed!');
+      logger.log('silly', JSON.stringify(result, undefined, 2));
+      return readBlobs([id, ...rest], needRestart, true);
     }
 
     if (result.state === BLOB_STATE.PROCESSED) {
       await logger.log('info', 'Blob prosessed!');
-      logger.log('debug', JSON.stringify(result, undefined, 2));
-      // FOR TESTING!
-      // await resetJobConfigOffset(jobId, jobConfig);
-      // await mongoOperator.setState({jobId, state: HARVESTER_JOB_STATES.PENDING_SRU_HARVESTER});
-      await mongoOperator.setState({jobId, state: COMMON_JOB_STATES.DONE});
-      return readBlobs(rest);
+      const done = handleProsessed(result);
+
+      if (!done) {
+        logger.log('debug', JSON.stringify(result, undefined, 2));
+        return readBlobs(rest, needRestart || !done);
+      }
+
+      return readBlobs(rest, !done);
     }
 
     if (result.state === BLOB_STATE.TRANSFORMATION_FAILED) {
-      return handleTransformationFailed(result);
+      logger.log('info', 'Blob transformation failed!');
+      logger.log('debug', JSON.stringify(result, undefined, 2));
+
+      return readBlobs(rest, true);
     }
 
     if (result.state === BLOB_STATE.ABORTED) {
       logger.log('info', 'Blob ABORTED!');
       await mongoOperator.setState({jobId, state: COMMON_JOB_STATES.ABORTED});
-      return readBlobs(rest);
+      return readBlobs(rest, needRestart);
     }
 
-    return readBlobs(rest);
+    return readBlobs(rest, needRestart, true);
 
-    async function handleTransformed(result) {
-      logger.log('info', 'Blob is pending to be processed!');
-      logger.log('debug', JSON.stringify(result, undefined, 2));
-      const timePast = moment(moment(result.modificationTime).add(2, 'm').format()).isSameOrBefore(moment().format());
-      const hasRecords = result.processingInfo.numberOfRecords > 0;
-      logger.log('info', `Last modification time has been 2 mins ago: ${timePast}`);
-      if (!timePast) { // eslint-disable-line functional/no-conditional-statement
-        logger.log('debug', `Current time: ${moment().format()}`);
-        logger.log('debug', `Last modification time: ${moment(result.modificationTime).format()}`);
-      }
-      logger.log('info', `Blob has at least one transformed record: ${hasRecords}`);
-      if (timePast && hasRecords) {
-        logger.log('info', 'Mark as processed!');
-        await eratuontiOperator.updateBlobState(id, BLOB_STATE.PROCESSED);
-        await setTimeoutPromise(10000);
-        return readBlobs([id, ...rest]);
-      }
-      await setTimeoutPromise(15000);
-      return readBlobs([id, ...rest]);
+    function handleProsessed(result) {
+      const {importResults} = result.processingInfo;
+      const needRestart = importResults.filter(note => {
+        if (note.status === 'SKIPPED' && note.metadata.reason === '409 - Modification history mismatch (CAT)') {
+          return true;
+        }
+
+        return false;
+      });
+
+      return needRestart.length < 1;
+    }
+  }
+
+  async function handleReset() {
+    logger.log('info', JSON.stringify(job, undefined, 2));
+
+    if (jobConfig.linkDataHarvestSearch.type === 'sru') {
+      await resetJobConfigOffset(jobId, jobConfig);
+      await mongoOperator.setState({jobId, state: HARVESTER_JOB_STATES.PENDING_SRU_HARVESTER});
+      return;
     }
 
-    async function handleTransformationFailed(result) {
-      logger.log('info', 'Blob transformation failed!');
-      logger.log('info', JSON.stringify(job, undefined, 2));
-      logger.log('info', JSON.stringify(result, undefined, 2));
-      // IF result.processingInfo.transformationError is X restart else set state COMMON_JOB_STATES.ERROR
-
-      if (jobConfig.linkDataHarvestSearch.type === 'sru') {
-        await resetJobConfigOffset(jobId, jobConfig);
-        await mongoOperator.setState({jobId, state: HARVESTER_JOB_STATES.PENDING_SRU_HARVESTER});
-        return readBlobs(rest);
-      }
-
-      if (jobConfig.linkDataHarvestSearch.type === 'oai-pmh') {
-        await resetJobConfigResumptionToken(jobId, jobConfig);
-        await mongoOperator.setState({jobId, state: HARVESTER_JOB_STATES.PENDING_OAI_PMH_HARVESTER});
-        return readBlobs(rest);
-      }
-
-      if (jobConfig.linkDataHarvestSearch.type === 'finto') {
-        await mongoOperator.setState({jobId, state: HARVESTER_JOB_STATES.PENDING_OAI_PMH_HARVESTER});
-        return readBlobs(rest);
-      }
-
-      await mongoOperator.setState({jobId, state: COMMON_JOB_STATES.ERROR});
-      return readBlobs(rest);
+    if (jobConfig.linkDataHarvestSearch.type === 'oai-pmh') {
+      await resetJobConfigResumptionToken(jobId, jobConfig);
+      await mongoOperator.setState({jobId, state: HARVESTER_JOB_STATES.PENDING_OAI_PMH_HARVESTER});
+      return;
     }
+
+    if (jobConfig.linkDataHarvestSearch.type === 'finto') {
+      await mongoOperator.setState({jobId, state: HARVESTER_JOB_STATES.PENDING_OAI_PMH_HARVESTER});
+      return;
+    }
+
+    await mongoOperator.setState({jobId, state: COMMON_JOB_STATES.ERROR});
+    return;
 
     async function resetJobConfigOffset(jobId, jobConfig) {
       const updatedJobConfig = {
