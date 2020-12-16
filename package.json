@@ -30,31 +30,28 @@
 		"prod": "NODE_ENV=production npm run build && npm run start"
 	},
 	"dependencies": {
-		"@natlibfi/marc-record-serializers": "^7.1.6",
+		"@babel/runtime": "^7.12.5",
 		"@natlibfi/melinda-commons": "^11.1.1",
-		"@natlibfi/melinda-backend-commons": "2.0.2",
+		"@natlibfi/melinda-backend-commons": "^2.0.2",
 		"@natlibfi/melinda-record-link-migration-commons": "git+https://github.com/NatLibFi/melinda-record-link-migration-commons.git#melkehitys-1117",
-		"@natlibfi/melinda-record-import-commons": "7.0.3",
-		"@natlibfi/sru-client": "^4.0.2",
-		"amqplib": ">=0.5.5 < 1.0.0",
-		"esm": "^3.2.25",
-		"moment": "^2.24.0",
-		"mongodb": "^3.5.9",
+		"@natlibfi/melinda-record-import-commons": "^9.1.0",
+		"amqplib": ">=0.6.0 < 1.0.0",
+		"moment": "^2.29.1",
+		"mongodb": "^3.6.3",
 		"xml2js": ">=0.4.23 < 1.0.0",
-		"uuid": "^8.2.0"
+		"uuid": "^8.3.1"
 	},
 	"devDependencies": {
-		"@babel/cli": "^7.8.4",
-		"@babel/core": "^7.8.7",
-		"@babel/node": "^7.8.7",
-		"@babel/preset-env": "^7.8.7",
-		"babel-eslint": "^10.0.3",
-		"cross-env": "^7.0.0",
-		"eslint": "^6.8.0",
-		"@natlibfi/eslint-config-melinda-backend": ">1.0.0-alpha.1",
-		"eslint-plugin-import": "^2.20.0",
-		"nodemon": "^2.0.2",
-		"npm-check": "^5.9.0"
+		"@babel/cli": "^7.12.8",
+		"@babel/core": "^7.12.9",
+		"@babel/node": "^7.12.6",
+		"@babel/preset-env": "^7.12.7",
+		"babel-eslint": "^10.1.0",
+		"cross-env": "^7.0.3",
+		"eslint": "^7.14.0",
+		"@natlibfi/eslint-config-melinda-backend": "^1.0.6",
+		"eslint-plugin-import": "^2.22.1",
+		"nodemon": "^2.0.6"
 	},
 	"eslintConfig": {
 		"extends": "@natlibfi/melinda-backend"
@@ -64,15 +61,13 @@
 			[
 				"@babel/preset-env",
 				{
-					"targets": {
-						"node": "12"
-					}
+					"targets": "maintained node versions"
 				}
 			]
 		]
 	},
 	"nodemonConfig": {
-		"exec": "npm run lint:dev && npm run start:dev",
+		"exec": "npm run lint:dev && npm run start:dev || touch src/index.js",
 		"watch": [
 			"src/*"
 		],
