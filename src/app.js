@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars, no-undef, no-warning-comments */
 import {promisify} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {eratuontiFactory, mongoFactory, COMMON_JOB_STATES} from '@natlibfi/melinda-record-link-migration-commons';
+import {eratuontiFactory, mongoFactory, COMMON_JOB_STATES} from '@natlibfi/melinda-record-update-commons';
 import {readBlobsFromEratuonti} from './interfaces/eratuonti';
 
 export default async function ({apiUrl, apiUsername, apiPassword, apiClientUserAgent, mongoUrl}) {
@@ -9,7 +9,7 @@ export default async function ({apiUrl, apiUsername, apiPassword, apiClientUserA
   const mongoOperator = await mongoFactory(mongoUrl);
   const eratuontiOperator = eratuontiFactory({apiUrl, apiUsername, apiPassword, apiClientUserAgent}); // eslint-disable-line no-unused-vars
   const setTimeoutPromise = promisify(setTimeout);
-  logger.log('info', 'Melinda-eratuonti-watcher-link-migration has started');
+  logger.log('info', 'Melinda-record-update-handler has started');
 
   return check();
 

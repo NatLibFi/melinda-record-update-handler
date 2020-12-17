@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import {promisify} from 'util';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
-import {COMMON_JOB_STATES, HARVESTER_JOB_STATES} from '@natlibfi/melinda-record-link-migration-commons';
+import {COMMON_JOB_STATES, HARVESTER_JOB_STATES} from '@natlibfi/melinda-record-update-commons';
 import {BLOB_STATE} from '@natlibfi/melinda-record-import-commons';
 
 export async function readBlobsFromEratuonti(job, mongoOperator, eratuontiOperator) {

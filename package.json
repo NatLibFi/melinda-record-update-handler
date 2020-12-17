@@ -33,7 +33,7 @@
 		"@babel/runtime": "^7.12.5",
 		"@natlibfi/melinda-commons": "^11.1.1",
 		"@natlibfi/melinda-backend-commons": "^2.0.2",
-		"@natlibfi/melinda-record-link-migration-commons": "git+https://github.com/NatLibFi/melinda-record-link-migration-commons.git#melkehitys-1117",
+		"@natlibfi/melinda-record-update-commons": "^1.0.0-alpha.1",
 		"@natlibfi/melinda-record-import-commons": "^9.1.0",
 		"amqplib": ">=0.6.0 < 1.0.0",
 		"moment": "^2.29.1",

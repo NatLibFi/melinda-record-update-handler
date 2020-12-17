@@ -1,6 +1,6 @@
-# Service for record link migration
+# Handler service for record update pipeline
 
-This service collects data and sends it as blob to link-transformers
+This service collects data and from erätuonti and based on results aproves or ask redo
 
 ## License and copyright
 
